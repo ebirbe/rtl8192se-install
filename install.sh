@@ -1,9 +1,5 @@
 #!/bin/bash
 #
-# tlwn722n-linux-install: An automatic installer for Wireless USB device
-# "TP-LINK TL-WN722N" or any other that uses the Atheros "htc_9271"
-# firmware.
-#
 # Copyright (C) 2011 Erick Birbe <erickcion@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
@@ -32,8 +28,35 @@ MOD_DIR="/lib/modules/"$(uname -r)
 PWD=$( pwd )/
 SRC="source"
 
-# TODO descargar firmware
-# TODO Comprobar y descargar linux-header
+##
+
+write_to_stderror()
+{
+	echo $1 1>&2
+}
+
+check_application_exists()
+{
+	if [ -x "`which $1`" ]; then
+		return 0
+	else
+		write_to_stderror("Impossible to find the '$1' executable.")
+		return 1
+	fi
+}
+install_debian_app {
+	if [ -x "`which apt-get`" ]; then
+		apt-get install linux-headers-$(uname -r)
+		if [ $? -ne 0 ]; then
+			echo "There was a problem installing your linux headers." 1>&2
+			exit 1
+		fi
+	else
+		echo "The linux headers can not be found nor installed." 1>&2
+		exit 1
+	fi
+}
+##
 
 # Make sure only root can run our script
 if [[ $EUID -ne 0 ]]; then
