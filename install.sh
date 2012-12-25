@@ -124,7 +124,7 @@ if [ $? -ne 0 ]; then
 	exit $STATUS_ERROR
 fi
 
-echo "Your driver is now installed."
 echo
+echo "Your driver is now installed."
 echo "Enjoy it!"
 echo
