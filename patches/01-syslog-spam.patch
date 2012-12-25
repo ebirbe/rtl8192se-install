@@ -1,0 +1,13 @@
+Index: rtl8192SE-linux-install/rtl8192se_linux_2.6.0019.1207.2010/HAL/rtl8192/rtl_dm.c
+===================================================================
+--- rtl8192SE-linux-install.orig/rtl8192se_linux_2.6.0019.1207.2010/HAL/rtl8192/rtl_dm.c	2012-12-25 12:12:51.501973877 -0430
++++ rtl8192SE-linux-install/rtl8192se_linux_2.6.0019.1207.2010/HAL/rtl8192/rtl_dm.c	2012-12-25 12:14:04.966338165 -0430
+@@ -3834,7 +3834,7 @@
+ 	if(priv->pwrdown)
+ 	{
+ 		u1Tmp = read_nic_byte(dev, 0x06);
+-		printk("pwrdown, 0x6(BIT6)=%02x\n", u1Tmp);
++		dev_dbg(&dev->dev, "pwrdown, 0x6(BIT6)=%02x\n", u1Tmp);
+ 		retval = (u1Tmp & BIT6) ? eRfOn: eRfOff;
+ 		
+ 		if(u1Tmp == 0xff)
