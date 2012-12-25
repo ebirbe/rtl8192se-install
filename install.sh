@@ -82,6 +82,11 @@ check_apps()
 		DEPENDS="$DEPENDS make"
 	fi
 	
+	if ! application_exists quilt; then 
+		IS_FINE=$STATUS_ERROR
+		DEPENDS="$DEPENDS quilt"
+	fi
+	
 	if [ $IS_FINE -ne $STATUS_SUCCESS ]; then
 		echo "Trying to install the dependencies:" $DEPENDS
 		if ! install_debian_app $DEPENDS; then
@@ -99,6 +104,13 @@ if ! is_root; then
 fi
 
 check_apps
+
+echo "Applying patches..."
+quilt pop -a
+quilt push -a
+if [ $? -ne 0 ]; then
+	write_warning "There was a problem applying the patch."
+fi
 
 echo "Changing to directory \"$SRC_DEST\"..."
 cd $SRC_DEST
