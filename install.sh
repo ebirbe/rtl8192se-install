@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (C) 2011 Erick Birbe <erickcion@gmail.com>
+# Copyright (C) 2012 Erick Birbe <erickcion@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,191 +17,114 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-CWPACKAGE="compat-wireless-2.6"
-CWEXT=".tar.bz2"
-CWURL="http://linuxwireless.org/download/compat-wireless-2.6/"
-MOD_NAME="ath9k_htc"
-FW_NAME="htc_9271.fw"
-CWDRVSLCT="./scripts/driver-select"
-FW_DIR="/lib/firmware/"
-MOD_DIR="/lib/modules/"$(uname -r)
+SRC_DEST="rtl8192se_linux_2.6.0019.1207.2010"
+MODULE_NAME="r8192se_pci"
+
 PWD=$( pwd )/
-SRC="source"
+STATUS_SUCCESS=0
+STATUS_ERROR=1
 
+## Functions ##
+
+# Writes a string to stderror as ERROR
+write_error()
+{
+	echo "ERROR: $*" 1>&2
+}
+
+# Writes a string to stderror as WARNING
+write_warning()
+{
+	echo "WARNING: $*" 1>&2
+}
+
+# Determines if the user is root
+is_root()
+{
+	if [[ $EUID -ne 0 ]]; then
+	   write_error "This script must be run as root"
+	   return $STATUS_ERROR
+	fi
+}
+
+# Determines if an aplication executable exists in PATH
+application_exists()
+{
+	if ! [ -x "`which $1`" ]; then
+		write_error "Impossible to find the '$1' executable."
+		return  $STATUS_ERROR
+	fi
+}
+
+# Install aplications with apt-get
+install_debian_app ()
+{	
+	apt-get install $*
+	if [ $? -ne 0 ]; then
+		write_error "There was a problem installing: $*."
+		return $STATUS_ERROR
+	fi
+}
+
+# Check for necessary applications
+check_apps()
+{
+	IS_FINE=$STATUS_SUCCESS
+	DEPENDS=""
+	
+	if ! [ -d /usr/src/linux-headers-$(uname -r) ]; then
+		IS_FINE=$STATUS_ERROR
+		DEPENDS="$DEPENDS linux-headers-$(uname -r)"
+	fi
+
+	if ! application_exists make; then 
+		IS_FINE=$STATUS_ERROR
+		DEPENDS="$DEPENDS make"
+	fi
+	
+	if [ $IS_FINE -ne $STATUS_SUCCESS ]; then
+		echo "Trying to install the dependencies:" $DEPENDS
+		if ! install_debian_app $DEPENDS; then
+			echo "Please install the required dependencies and try again."
+			exit $STATUS_ERROR
+		fi
+	fi
+}
 ##
 
-write_to_stderror()
-{
-	echo $1 1>&2
-}
-
-check_application_exists()
-{
-	if [ -x "`which $1`" ]; then
-		return 0
-	else
-		write_to_stderror("Impossible to find the '$1' executable.")
-		return 1
-	fi
-}
-install_debian_app {
-	if [ -x "`which apt-get`" ]; then
-		apt-get install linux-headers-$(uname -r)
-		if [ $? -ne 0 ]; then
-			echo "There was a problem installing your linux headers." 1>&2
-			exit 1
-		fi
-	else
-		echo "The linux headers can not be found nor installed." 1>&2
-		exit 1
-	fi
-}
-##
-
-# Make sure only root can run our script
-if [[ $EUID -ne 0 ]]; then
-   echo "This script must be run as root" 1>&2
-   exit 1
+# Check is root user
+if ! is_root; then
+	echo "Login as administrator user and try again."
+	exit $STATUS_ERROR
 fi
 
-if [ -d $MOD_DIR ]; then
-	echo ""
-else
-	if [ -x "`which apt-get`" ]; then
-		apt-get install linux-headers-$(uname -r)
-		if [ $? -ne 0 ]; then
-			echo "There was a problem installing your linux headers." 1>&2
-			exit 1
-		fi
-	else
-		echo "The linux headers can not be found nor installed." 1>&2
-		exit 1
-	fi
-fi
+check_apps
 
-if [ -f $PWD$CWPACKAGE$CWEXT ]; then
-	# The file is present, Do not download and continue
-	echo ""
-else
-	if [ -x "`which wget`" ]; then
-		echo "Downloading package" $CWPACKAGE", please wait..."
-		wget -v $CWURL$CWPACKAGE$CWEXT -O $CWPACKAGE$CWEXT
-		if [ $? -ne 0 ]; then
-			echo "There was a problem downloading" $CWPACKAGE 1>&2
-			exit 1
-		fi
-	else
-		echo "wget is not installed." 1>&2
-		echo "Please, install wget to continue." 1>&2
-		exit 1
-	fi
-fi
+echo "Changing to directory \"$SRC_DEST\"..."
+cd $SRC_DEST
 
-if [ -d $FW_DIR ]; then
-	if [ -f $FW_DIR$FW_NAME ]; then
-		echo ""
-	else
-		cp $PWD$FW_NAME $FW_DIR
-		if [ $? -ne 0 ]; then
-			echo "There was a problem copying" $PWD$FW_NAME "to" $FW_DIR 1>&2
-			exit 1
-		fi
-	fi
-else
-	echo "Unable to find the directory" $FW_DIR 1>&2
-	exit 1
-fi
-
-if [ -x "`which tar`" ]; then
-	echo "Decompressing the package, please wait..."
-	if [ -d $SRC ]; then
-		echo ""
-	else
-		mkdir $SRC
-	fi
-	if [ $? -ne 0 ]; then
-		echo "There was a problem creating the directory, check your permissions." 1>&2
-		exit 1
-	fi
-	tar jxvf $PWD$CWPACKAGE$CWEXT -C $SRC
-	if [ $? -ne 0 ]; then
-		echo "There was a problem decompressing" $CWPACKAGE$CWEXT 1>&2
-		exit 1
-	fi
-else
-	echo "tar is not installed."
-	echo "Please, install tar to continue."
-	exit
-fi
-
-CWSRC=$SRC/$(ls -1tr $SRC | tail -1)
-echo "Changing to directory \"$CWSRC\"..."
-cd $CWSRC
-
-echo "Trying to select the $MOD_NAME diver to be compiled..."
-if [ -f $CWDRVSLCT ]; then
-	if [ -x $CWDRVSLCT ]; then
-		$CWDRVSLCT $MOD_NAME
-		if [ $? -ne 0 ]; then
-			echo "There was a problem selecting the driver. Will run the complete compilation." 1>&2
-		fi
-	else
-		echo $CWDRVSLCT "is not executable." 1>&2
-	fi
-else
-	echo $CWDRVSLCT "does not exists." 1>&2
-fi
-
-if [ -x "`which make`" ]; then
-	echo "Compiling modules..."
-	make
-	if [ $? -ne 0 ]; then
-		echo "There was a problem compiling the package." 1>&2
-		exit 1
-	fi
-	echo "Installing new modules..."
-	make install
-	if [ $? -ne 0 ]; then
-		echo "There was a problem installing the modules." 1>&2
-		exit 1
-	fi
-	echo "Unloading old modules..."
-	make unload
-	if [ $? -ne 0 ]; then
-		echo "There was a problem unloading old modules." 1>&2
-		exit 1
-	fi
-else
-	echo "make is not installed." 1>&2
-	echo "Please, install make to continue." 1>&2
-	exit
-fi
-
-# Cargando el nuevo modulo del firmware
-if [ -x "`which modprobe`" ]; then
-	echo "Loading new module..."
-	modprobe $MOD_NAME
-	if [ $? -ne 0 ]; then
-		echo "There was a problem using modprobe." 1>&2
-		echo "Try rebooting to apply the changes." 1>&2
-		exit 1
-	fi
-else
-	echo "Can not find modprobe," 1>&2
-	echo "So please reboot to apply the changes." 1>&2
-	exit
-fi
-
-echo "Restoring" $CWPACKAGE"..."
-$CWDRVSLCT restore
+echo "Compiling modules..."
+make
 if [ $? -ne 0 ]; then
-	echo $CWPACKAGE "Could not be restored." 1>&2
+	write_error "There was a problem compiling the package."
+	exit $STATUS_ERROR
 fi
 
-echo "Returning to directory" $PWD
-cd $PWD
-if [ $? -eq 0 ]; then
-	echo ""
-	echo "Your driver should now be installed."
-	echo ""
+echo "Installing new modules..."
+make install
+if [ $? -ne 0 ]; then
+	write_error "There was a problem installing the modules."
+	exit $STATUS_ERROR
 fi
+
+echo "Activating module..."
+modprobe $MODULE_NAME
+if [ $? -ne 0 ]; then
+	write_error "There was a problem activating the modules."
+	exit $STATUS_ERROR
+fi
+
+echo "Your driver is now installed."
+echo
+echo "Enjoy it!"
+echo

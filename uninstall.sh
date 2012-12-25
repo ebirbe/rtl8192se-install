@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (C) 2011 Erick Birbe <erickcion@gmail.com>
+# Copyright (C) 2012 Erick Birbe <erickcion@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,6 +18,14 @@
 #
 
 SRC_DEST="rtl8192se_linux_2.6.0019.1207.2010"
+MODULE_NAME="r8192se_pci"
+
+PWD=$( pwd )/
+STATUS_SUCCESS=0
+STATUS_ERROR=1
+
+SRC_DEST="rtl8192se_linux_2.6.0019.1207.2010"
+MODULE_NAME="r8192se_pci"
 
 PWD=$( pwd )/
 STATUS_SUCCESS=0
@@ -46,72 +54,29 @@ is_root()
 	fi
 }
 
-# Determines if an aplication executable exists in PATH
-application_exists()
-{
-	if ! [ -x "`which $1`" ]; then
-		write_error "Impossible to find the '$1' executable."
-		return  $STATUS_ERROR
-	fi
-}
-
-# Install aplications with apt-get
-install_debian_app ()
-{	
-	apt-get install $*
-	if [ $? -ne 0 ]; then
-		write_error "There was a problem installing: $*."
-		return $STATUS_ERROR
-	fi
-}
-
-# Check for necessary applications
-check_apps()
-{
-	IS_FINE=$STATUS_SUCCESS
-	DEPENDS=""
-
-	if ! application_exists make; then 
-		IS_FINE=$STATUS_ERROR
-		DEPENDS="$DEPENDS make"
-	fi
-	
-	if [ $IS_FINE -ne $STATUS_SUCCESS ]; then
-		echo "Trying to install the dependencies:" $DEPENDS
-		if ! install_debian_app $DEPENDS; then
-			echo "Please install the required applications and try again."
-			exit $STATUS_ERROR
-		fi
-	fi
-}
-##
-
 # Check is root user
 if ! is_root; then
 	echo "Login as administrator user and try again."
-####	exit $STATUS_ERROR
+	exit $STATUS_ERROR
 fi
-
-check_apps
 
 echo "Changing to directory \"$SRC_DEST\"..."
 cd $SRC_DEST
 
-echo "Compiling modules..."
-make
+echo "Removing the driver..."
+make uninstall
 if [ $? -ne 0 ]; then
-	echo "There was a problem compiling the package." 1>&2
+	write_error "There was a problem uninstalling the modules."
 	exit $STATUS_ERROR
 fi
 
-echo "Installing new modules..."
-make install
+echo "Deactivating module..."
+rmmod $MODULE_NAME
 if [ $? -ne 0 ]; then
-	echo "There was a problem installing the modules." 1>&2
-	exit $STATUS_ERROR
+	write_warning "There was a problem deactivating the modules."
+	#exit $STATUS_ERROR
 fi
 
-echo "Your driver must be now installed"
 echo
-echo "Please, reboot your system now."
+echo "Unistall finished successfully!"
 echo
