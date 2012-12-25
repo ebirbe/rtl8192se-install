@@ -1,6 +1,6 @@
 # rtl8192se-install
 
-An automatic installer for Wireless PCI device "Realtek RTL8191SEvB 
+An automatic installer for Wireless PCI device "Realtek RTL8191SE 
 Wireless LAN Controller" or any other that uses the Realtek "r8192se" 
 module for the 2.6 Linux Kernel.
 
