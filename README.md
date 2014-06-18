@@ -33,6 +33,7 @@ The following applications are required before run the install script:
 
 * linux-headers-\[version\] (Where \[version\] is your specific kernel 
  version and architecture, example: linux-headers-2.6.32-5-amd64)
+* gcc
 * make
 * quilt
 
@@ -40,7 +41,7 @@ You can install the required applications with the next command as root
 (only in debian based systems):
 
  ```bash
- apt-get install make linux-header-$(uname -r) quilt
+ apt-get install gcc make linux-header-$(uname -r) quilt
  ```
 
 if you have a Debian based operative system, the script will try to 
