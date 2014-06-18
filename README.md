@@ -41,7 +41,7 @@ You can install the required applications with the next command as root
 (only in debian based systems):
 
  ```bash
- apt-get install gcc make linux-header-$(uname -r) quilt
+ apt-get install gcc make linux-headers-$(uname -r) quilt
  ```
 
 if you have a Debian based operative system, the script will try to 
